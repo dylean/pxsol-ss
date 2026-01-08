@@ -1,0 +1,11 @@
+# pxsol-ss Python 脚本依赖
+# Python 版本要求: >= 3.10 (推荐 3.11)
+# 
+# 安装方式:
+#   python3.11 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+
+# Solana Python SDK
+# 注意: 0.5.x 版本有 bug，请使用 0.4.2
+pxsol==0.4.2

@@ -1,0 +1,17 @@
+# Rust
+/target
+
+# Solana
+test-ledger
+
+# Python
+.venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
