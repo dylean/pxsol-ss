@@ -6,32 +6,25 @@ update_data.py - 更新链上数据
 
 使用前提：
     1. 程序已部署
-    2. 本地验证器正在运行
+    2. 已配置 .env 文件
     3. 用户已经写入过数据
-    4. 钱包有足够的 SOL 余额（如果数据变大需要补充租金）
+    4. 钱包有足够的 SOL 余额
 
 用法：
     python update_data.py
-
-注意：
-    - 更新数据与写入数据使用相同的逻辑
-    - 如果新数据比旧数据大，会自动从钱包扣除额外的租金
-    - 如果新数据比旧数据小，会自动退还多余的 SOL
 """
 
 import base64
 import pxsol
+import config
 
-# 启用日志
-pxsol.config.current.log = 1
+# 初始化配置
+config.init()
 
-# ============ 配置区域 ============
-# 程序地址（部署时获得，需要根据实际情况修改）
-PROGRAM_PUBKEY = 'DVapU9kvtjzFdH3sRd3VDCXjZVkwBR6Cxosx36A5sK5E'
-# ==================================
+# 获取钱包
+wallet = config.get_wallet()
 
-# 创建钱包
-ada = pxsol.wallet.Wallet(pxsol.core.PriKey.int_decode(0x01))
+print(f"📍 程序地址: {config.PROGRAM_PUBKEY}")
 
 
 def update(user: pxsol.wallet.Wallet, new_data: bytearray) -> None:
@@ -41,18 +34,12 @@ def update(user: pxsol.wallet.Wallet, new_data: bytearray) -> None:
     Args:
         user: 用户钱包
         new_data: 新的数据内容
-
-    说明：
-        程序会自动处理：
-        - 如果数据变大：从用户账户扣除额外租金
-        - 如果数据变小：退还多余的 SOL 到用户账户
-        - 重新分配存储空间
     """
-    prog_pubkey = pxsol.core.PubKey.base58_decode(PROGRAM_PUBKEY)
+    prog_pubkey = pxsol.core.PubKey.base58_decode(config.PROGRAM_PUBKEY)
 
     # 计算用户的 PDA 数据账户地址
     data_pubkey = prog_pubkey.derive_pda(user.pubkey.p)
-    print(f"数据账户地址: {data_pubkey.base58()}")
+    print(f"📦 数据账户地址: {data_pubkey.base58()}")
 
     # 先读取旧数据，显示对比
     try:
@@ -71,8 +58,8 @@ def update(user: pxsol.wallet.Wallet, new_data: bytearray) -> None:
     rq = pxsol.core.Requisition(prog_pubkey, [], bytearray())
 
     # 添加账户
-    rq.account.append(pxsol.core.AccountMeta(user.pubkey, 3))  # 用户账户
-    rq.account.append(pxsol.core.AccountMeta(data_pubkey, 1))  # 数据账户
+    rq.account.append(pxsol.core.AccountMeta(user.pubkey, 3))
+    rq.account.append(pxsol.core.AccountMeta(data_pubkey, 1))
     rq.account.append(pxsol.core.AccountMeta(pxsol.program.System.pubkey, 0))
     rq.account.append(pxsol.core.AccountMeta(pxsol.program.SysvarRent.pubkey, 0))
 
@@ -89,7 +76,7 @@ def update(user: pxsol.wallet.Wallet, new_data: bytearray) -> None:
     tx.sign([user.prikey])
 
     # 发送交易
-    print("\n正在发送交易...")
+    print("\n🚀 正在发送交易...")
     txid = pxsol.rpc.send_transaction(base64.b64encode(tx.serialize()).decode(), {})
     print(f"交易 ID: {txid}")
 
@@ -107,4 +94,4 @@ def update(user: pxsol.wallet.Wallet, new_data: bytearray) -> None:
 
 if __name__ == '__main__':
     # 示例：更新为新的内容
-    update(ada, bytearray(b'Hello, Solana! This is updated data.'))
+    update(wallet, bytearray(b'Updated! Hello from Devnet - pxsol-ss works!'))

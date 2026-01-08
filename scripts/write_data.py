@@ -6,29 +6,24 @@ write_data.py - 写入数据到链上
 
 使用前提：
     1. 程序已部署
-    2. 本地验证器正在运行
+    2. 已配置 .env 文件
     3. 钱包有足够的 SOL 余额
 
 用法：
     python write_data.py
-
-自定义数据：
-    修改 main 函数中的 save() 调用参数
 """
 
 import base64
 import pxsol
+import config
 
-# 启用日志
-pxsol.config.current.log = 1
+# 初始化配置
+config.init()
 
-# ============ 配置区域 ============
-# 程序地址（部署时获得，需要根据实际情况修改）
-PROGRAM_PUBKEY = 'DVapU9kvtjzFdH3sRd3VDCXjZVkwBR6Cxosx36A5sK5E'
-# ==================================
+# 获取钱包
+wallet = config.get_wallet()
 
-# 创建钱包
-ada = pxsol.wallet.Wallet(pxsol.core.PriKey.int_decode(0x01))
+print(f"📍 程序地址: {config.PROGRAM_PUBKEY}")
 
 
 def save(user: pxsol.wallet.Wallet, data: bytearray) -> None:
@@ -36,26 +31,22 @@ def save(user: pxsol.wallet.Wallet, data: bytearray) -> None:
     将数据存储到链上
 
     Args:
-        user: 用户钱包（数据将存储在该用户的 PDA 账户中）
+        user: 用户钱包
         data: 要存储的数据（字节数组）
     """
-    prog_pubkey = pxsol.core.PubKey.base58_decode(PROGRAM_PUBKEY)
+    prog_pubkey = pxsol.core.PubKey.base58_decode(config.PROGRAM_PUBKEY)
 
     # 计算用户的 PDA 数据账户地址
     data_pubkey = prog_pubkey.derive_pda(user.pubkey.p)
-    print(f"数据账户地址: {data_pubkey.base58()}")
+    print(f"📦 数据账户地址: {data_pubkey.base58()}")
 
     # 构建交易请求
     rq = pxsol.core.Requisition(prog_pubkey, [], bytearray())
 
     # 添加账户（顺序必须与程序中的解析顺序一致）
-    # 账户 0: 用户账户（签名者 + 可写）
-    rq.account.append(pxsol.core.AccountMeta(user.pubkey, 3))
-    # 账户 1: 数据账户（可写）
-    rq.account.append(pxsol.core.AccountMeta(data_pubkey, 1))
-    # 账户 2: 系统程序
+    rq.account.append(pxsol.core.AccountMeta(user.pubkey, 3))  # 用户账户
+    rq.account.append(pxsol.core.AccountMeta(data_pubkey, 1))  # 数据账户
     rq.account.append(pxsol.core.AccountMeta(pxsol.program.System.pubkey, 0))
-    # 账户 3: 租金系统变量
     rq.account.append(pxsol.core.AccountMeta(pxsol.program.SysvarRent.pubkey, 0))
 
     # 设置要存储的数据
@@ -71,7 +62,7 @@ def save(user: pxsol.wallet.Wallet, data: bytearray) -> None:
     tx.sign([user.prikey])
 
     # 发送交易
-    print("正在发送交易...")
+    print("\n🚀 正在发送交易...")
     txid = pxsol.rpc.send_transaction(base64.b64encode(tx.serialize()).decode(), {})
     print(f"交易 ID: {txid}")
 
@@ -91,4 +82,4 @@ def save(user: pxsol.wallet.Wallet, data: bytearray) -> None:
 
 if __name__ == '__main__':
     # 示例：存储一段文本
-    save(ada, bytearray(b'The quick brown fox jumps over the lazy dog'))
+    save(wallet, bytearray(b'Hello Solana Devnet! This is pxsol-ss storage.'))
